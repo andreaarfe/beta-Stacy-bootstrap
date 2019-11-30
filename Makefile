@@ -37,17 +37,17 @@ $(DATPATH)/pbc_data.Rdata: $(FUNPATH)/prep_data.R
 
 ####### Simulations
 
-$(DATPATH)/simulations.Rdata: $(FUNPATH)/BSB_code.R \
+$(RESPATH)/simulations.Rdata: $(FUNPATH)/BSB_code.R \
 													 $(FUNPATH)/functions.R \
 													 $(DATPATH)/pbc_data.Rdata
 	R CMD BATCH $(FUNPATH)/BSB_code.R
 
-$(DATPATH)/beta_stacy_post.Rdata: $(FUNPATH)/beta_stacy_post.R \
+$(RESPATH)/beta_stacy_post.Rdata: $(FUNPATH)/beta_stacy_post.R \
 													 $(FUNPATH)/functions.R \
 													 $(DATPATH)/pbc_data.Rdata
 	R CMD BATCH $(FUNPATH)/beta_stacy_post.R
 
-$(DATPATH)/results.Rdata:  $(FUNPATH)/results.R \
+$(RESPATH)/results.Rdata:  $(FUNPATH)/results.R \
 											     $(DATPATH)/beta_stacy_post.Rdata \
 												   $(DATPATH)/simulations.Rdata \
 												   $(DATPATH)/pbc_data.Rdata
