@@ -35,9 +35,11 @@ d_rmst <- data.frame(surv=c(bstacy_rmst_0,
                        bsb_rmst_0_10,
                        bsb_rmst_0_100,
                        bsb_rmst_0_1000),
-                Method=rep(c('Beta-Stacy', 'BSB-10', 'BSB-100', 'BSB-1000'), 
+                Method=rep(c('GvdVa', 'BSB-10', 'BSB-100', 'BSB-1000'), 
                            each=length(bstacy_rmst_0)))
-d_rmst$Method <- factor(d_rmst$Method, levels = c('BSB-10', 'BSB-100', 'BSB-1000', 'Beta-Stacy'))
+d_rmst$Method <- factor(d_rmst$Method, levels = c('BSB-10', 'BSB-100', 'BSB-1000', 'GvdVa'),
+                        labels = c('BSB-10', 'BSB-100', 'BSB-1000', expression('GvdVa \n (reference)')),
+)
 p2 <- ggplot(d_rmst, aes(y=surv, x=Method, fill=Method)) +
   geom_violin(show.legend = FALSE, alpha=0.6) +
   geom_boxplot(width=0.1, show.legend = FALSE,
@@ -57,9 +59,10 @@ d_surv <- data.frame(surv=c(bstacy_surv_0,
                             bsb_surv_0_10,
                             bsb_surv_0_100,
                             bsb_surv_0_1000),
-                     method=rep(c('Beta-Stacy', 'BSB-10', 'BSB-100', 'BSB-1000'), 
+                     method=rep(c('GvdVa', 'BSB-10', 'BSB-100', 'BSB-1000'), 
                                 each=length(bstacy_surv_0)))
-d_surv$method <- factor(d_surv$method, levels = c('BSB-10', 'BSB-100', 'BSB-1000', 'Beta-Stacy'))
+d_surv$method <- factor(d_surv$method, levels = c('BSB-10', 'BSB-100', 'BSB-1000', 'GvdVa'),
+                        labels = c('BSB-10', 'BSB-100', 'BSB-1000', expression('GvdVa \n (reference)')))
 p3 <- ggplot(d_surv, aes(y=surv, x=method, fill=method)) + 
   geom_violin(show.legend = FALSE, alpha=0.6) +
   geom_boxplot(width=0.1,show.legend = FALSE,
@@ -90,7 +93,7 @@ p4 <- ggplot(d_diff, aes(x=Method, y=diff,
   #             show.legend = FALSE) +
   scale_fill_brewer(palette="Blues") + theme_minimal() +
   theme(plot.title = element_text(face = 'bold')) +
-  xlab('Methods') + 
+  xlab('Method') + 
   ylab('Difference in mean survival time') +
   labs(title='d) Difference in mean survival times',
        subtitle = '(D-penicillammine vs. placebo)')

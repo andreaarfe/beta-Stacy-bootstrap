@@ -1,6 +1,8 @@
 
 # R package for numerical integration
-library(pracma)
+#library(pracma)
+library(mvQuad)
+library(Rcpp)
 
 # Function to simulate from the beta-Stacy prior law or posterior law given 
 # a set of censored observations.
@@ -23,8 +25,7 @@ library(pracma)
 ##     x[1]=0 < x[2] < x[3] < ... < x[K] 
 # Output
 ## list of two components:
-## $grid = final discretization grid (includes both the points in x and
-##         the distinct event times in 'time')
+## $grid = discretization grid 
 ## $cumul_prob = matrix of dimension n x length(grid); 
 ##             the i-th row containes the values of the i-th replicate 
 ##             S_i of the survival probabilities; s[i,j] = S_i(grid[j])
@@ -35,7 +36,7 @@ betastacy_sim <- function(n, c_bs, F_bs, f_bs, grid, time=NULL, event=NULL){
     time <- 0
     event <- 0
   } 
-  y <- sort(unique(c(grid, time[event==1]))) # Discretization grid
+  y <- grid # Discretization grid
   # Computes the process parameters
   if(!prior){
     c_post <- c_bs_post(y[-1], time, event, c_bs, F_bs, f_bs)
@@ -82,14 +83,64 @@ betastacy_sim <- function(n, c_bs, F_bs, f_bs, grid, time=NULL, event=NULL){
 ##        must be vectorized
 # Output
 ## Vector of values of F_c*, computed over the elements of x
+
+# Rcpp version (even faster)
+# Gauss-Kronrod weights and nodes (15 nodes)
+gk <- createNIGrid(dim = 1, type = 'GKr', level = 15)
+# Defines some auxiliary functions
+cppFunction('NumericVector M(NumericVector x, NumericVector y){
+            int n = x.size();
+            int m = y.size();
+            NumericVector out(n);
+            for(int i = 0; i<n; i++){
+              out[i] = 0;
+              for(int j = 0; j<m; j++){
+                if(x[i] <= y[j]){
+                  out[i] += 1;
+                }
+              }
+            }
+            return out;
+            }')
+# Function definition
 F_bs_post_cont <- function(x, time, event, c_bs, F_bs, f_bs){
-  # Defines some auxiliary functions
-  H <- function(x){ c_bs(x)*f_bs(x)/(c_bs(x)*(1-F_bs(x)) + sum(time >= x)) }
-  #L <- function(x){ integrate(Vectorize(H), 0, x, subdivisions = 1000)$value }
-  L <- function(x){ ifelse(x>0,pracma::gauss_kronrod(Vectorize(H), 0, x)$value,0) }
-  y <- sapply(x, L)
-  return( 1-exp(-y) )
+  out <- numeric(length(x))
+  for(i in 1:length(x)){
+    xx <- gk$nodes*x[i]
+    H <- c_bs(xx)*f_bs(xx)/(c_bs(xx)*(1-F_bs(xx)) + M(xx, time))
+    out[i] <- sum(gk$weights * x[i] * H)
+  }
+  return(1-exp(-out)) 
 }
+
+# # New version (faster)
+# # Gauss-Kronrod weights and nodes (15 nodes)
+# gk <- createNIGrid(dim = 1, type = 'GKr', level = 15)
+# # Defines some auxiliary functions
+# L <- function(x, time, c_bs, F_bs, f_bs){
+#   out <- numeric(length(x))
+#   for(i in 1:length(x)){
+#     xx <- gk$nodes*x[i]
+#     H <- c_bs(xx)*f_bs(xx)/(c_bs(xx)*(1-F_bs(xx)) + rowSums(outer(xx, time, "<=")))
+#     out[i] <- sum(gk$weights * x[i] * H)
+#   }
+#   return(out)
+# }
+# # Function definition
+# F_bs_post_cont <- function(x, time, event, c_bs, F_bs, f_bs){
+#   y <- sapply(x, function(xx) L(xx, time, c_bs, F_bs, f_bs) )
+#   return( 1-exp(-y) )
+# }
+
+# Old version (slower)
+# F_bs_post_cont <- function(x, time, event, c_bs, F_bs, f_bs){
+#   # Defines some auxiliary functions
+#   H <- function(x){ c_bs(x)*f_bs(x)/(c_bs(x)*(1-F_bs(x)) + sum(time >= x)) }
+#   #L <- function(x){ integrate(Vectorize(H), 0, x, subdivisions = 1000)$value }
+#   L <- function(x){ ifelse(x>0,pracma::gauss_kronrod(Vectorize(H), 0, x)$value,0) }
+#   y <- sapply(x, L)
+#   return( 1-exp(-y) )
+# }
 
 # Function that computes the discrete component F_d* of the beta-Stacy posterior
 # mean function F*= 1- (1-F_c*)(1-F_d*)
